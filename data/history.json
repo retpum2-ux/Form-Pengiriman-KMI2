@@ -1,0 +1,17 @@
+[
+  {
+    "id": "KMI-1792121487825",
+    "submittedAt": "2026-10-16T03:31:27.825Z",
+    "rows": [
+      {
+        "Tanggal": "5 Oktober 2026",
+        "Nama Barang": "Isolasi Kertas",
+        "Qty": 20,
+        "Kuantitas": "pcs",
+        "Keterangan": "Diterima dengann baik"
+      }
+    ],
+    "sheetSyncStatus": "skipped_no_webhook",
+    "sheetSyncMessage": "Data disimpan secara lokal di backend. Webhook Google Spreadsheet belum dikonfigurasi."
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "name": "Form Pengiriman KMI2",
+  "description": "Aplikasi form input pengiriman KMI2 PT KMI Wire and Cable Tbk dengan integrasi Google Spreadsheet backend dan pelaporan WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
