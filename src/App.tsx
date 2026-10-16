@@ -4,50 +4,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Trash2,
-  ChevronDown,
-  Check,
-  Plus,
-  Loader2,
-  Settings,
-} from 'lucide-react';
+import { Trash2, ChevronDown, Check, Loader2 } from 'lucide-react';
 
-import { DeliveryItem, HistoryRecord } from './types';
-import { MasterItemModal } from './components/MasterItemModal';
-import { MasterUnitModal } from './components/MasterUnitModal';
+import { DeliveryItem } from './types';
+import { DAFTAR_BARANG, DAFTAR_KUANTITAS } from './data/masterData';
 import { SheetSettingsModal } from './components/SheetSettingsModal';
 import { WhatsAppModal } from './components/WhatsAppModal';
-
-const DEFAULT_ITEMS = [
-  'Isolasi Kertas',
-  'Isolasi hijau',
-  'Kabel NYM 2 x 1.5 mm²',
-  'Kabel NYM 3 x 2.5 mm²',
-  'Kabel NYY 4 x 16 mm²',
-  'Kabel NYY 4 x 25 mm²',
-  'Kabel NYA 1 x 2.5 mm²',
-  'Kabel FRC 2 x 1.5 mm²',
-  'Kabel BC (Bare Copper) 50 mm²',
-  'Drum Kayu KMI Ø 120cm',
-  'Palet Kayu KMI',
-  'Segel Lead Seal KMI',
-  'Klem Kabel KMI',
-  'Pita Pengikat Steel Strapping',
-];
-
-const DEFAULT_UNITS = [
-  'pcs',
-  'roll',
-  'box',
-  'meter',
-  'drum',
-  'kg',
-  'lembar',
-  'pack',
-  'set',
-  'batang',
-];
 
 export default function App() {
   const getTodayInputDate = () => {
@@ -64,38 +26,24 @@ export default function App() {
       id: 'item-1',
       nama_barang: '',
       qty: '',
-      kuantitas: 'pcs',
+      kuantitas: DAFTAR_KUANTITAS[0] || 'pcs',
       keterangan: '',
     },
   ]);
 
-  // Master Data (Barang & Satuan)
-  const [masterItems, setMasterItems] = useState<string[]>(() => {
-    const saved = localStorage.getItem('kmi_master_items');
-    return saved ? JSON.parse(saved) : DEFAULT_ITEMS;
-  });
+  // Dropdown states
+  const [activeItemDropdown, setActiveItemDropdown] = useState<string | null>(null);
+  const [activeUnitDropdown, setActiveUnitDropdown] = useState<string | null>(null);
 
-  const [masterUnits, setMasterUnits] = useState<string[]>(() => {
-    const saved = localStorage.getItem('kmi_master_units');
-    return saved ? JSON.parse(saved) : DEFAULT_UNITS;
-  });
-
-  // Settings & Webhook
+  // Modals for Google Sheets and WhatsApp
+  const [openSheetSettingsModal, setOpenSheetSettingsModal] = useState(false);
+  const [openWhatsAppModal, setOpenWhatsAppModal] = useState(false);
   const [googleSheetWebhookUrl, setGoogleSheetWebhookUrl] = useState<string>(() => {
     return localStorage.getItem('kmi_sheet_webhook_url') || '';
   });
 
-  // UI state for dropdowns & modals
-  const [activeItemDropdown, setActiveItemDropdown] = useState<string | null>(null);
-  const [activeUnitDropdown, setActiveUnitDropdown] = useState<string | null>(null);
-  const [openMasterItemModal, setOpenMasterItemModal] = useState(false);
-  const [openMasterUnitModal, setOpenMasterUnitModal] = useState(false);
-  const [openSheetSettingsModal, setOpenSheetSettingsModal] = useState(false);
-  const [openWhatsAppModal, setOpenWhatsAppModal] = useState(false);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync with backend on mount
   useEffect(() => {
     fetch('/api/config')
       .then((r) => r.json())
@@ -106,49 +54,7 @@ export default function App() {
         }
       })
       .catch(() => {});
-
-    fetch('/api/master-data')
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data.items) && data.items.length > 0) {
-          setMasterItems(data.items);
-          localStorage.setItem('kmi_master_items', JSON.stringify(data.items));
-        }
-        if (Array.isArray(data.units) && data.units.length > 0) {
-          setMasterUnits(data.units);
-          localStorage.setItem('kmi_master_units', JSON.stringify(data.units));
-        }
-      })
-      .catch(() => {});
   }, []);
-
-  const updateMasterItems = async (newItems: string[]) => {
-    setMasterItems(newItems);
-    localStorage.setItem('kmi_master_items', JSON.stringify(newItems));
-    try {
-      await fetch('/api/master-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: newItems, units: masterUnits }),
-      });
-    } catch (e) {
-      console.warn('Backend sync error:', e);
-    }
-  };
-
-  const updateMasterUnits = async (newUnits: string[]) => {
-    setMasterUnits(newUnits);
-    localStorage.setItem('kmi_master_units', JSON.stringify(newUnits));
-    try {
-      await fetch('/api/master-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: masterItems, units: newUnits }),
-      });
-    } catch (e) {
-      console.warn('Backend sync error:', e);
-    }
-  };
 
   const saveWebhookUrl = async (url: string): Promise<boolean> => {
     setGoogleSheetWebhookUrl(url);
@@ -160,7 +66,7 @@ export default function App() {
         body: JSON.stringify({ googleSheetWebhookUrl: url }),
       });
       return true;
-    } catch (e) {
+    } catch {
       return true;
     }
   };
@@ -181,7 +87,7 @@ export default function App() {
         });
       }
       return dateStr;
-    } catch (e) {
+    } catch {
       return dateStr;
     }
   };
@@ -191,7 +97,7 @@ export default function App() {
       id: 'item-' + (items.length + 1) + '-' + Date.now(),
       nama_barang: '',
       qty: '',
-      kuantitas: masterUnits[0] || 'pcs',
+      kuantitas: DAFTAR_KUANTITAS[0] || 'pcs',
       keterangan: '',
     };
     setItems([...items, newItem]);
@@ -233,7 +139,7 @@ export default function App() {
 
     const dateFormatted = formatIndonesianDate(tanggalInput);
     if (!dateFormatted) {
-      alert('Silakan pilih tanggal pengiriman terlebih dahulu.');
+      alert('Silakan pilih tanggal pengiriman.');
       return;
     }
 
@@ -246,7 +152,7 @@ export default function App() {
     setIsSubmitting(true);
 
     try {
-      // Exactly 5 columns: Tanggal, Nama Barang, Qty, Kuantitas, Keterangan
+      // Tepat 5 kolom: Tanggal, Nama Barang, Qty, Kuantitas, Keterangan
       const rowsToSend = items.map((item) => ({
         tanggal: dateFormatted,
         nama_barang: item.nama_barang.trim(),
@@ -264,11 +170,10 @@ export default function App() {
         }),
       });
 
-      // Automatically open the WhatsApp modal with options to copy and send!
+      // Buka popup laporan WhatsApp
       setOpenWhatsAppModal(true);
     } catch (err: any) {
       console.error('Submit error:', err);
-      // Still open WhatsApp modal so user doesn't lose their report
       setOpenWhatsAppModal(true);
     } finally {
       setIsSubmitting(false);
@@ -277,21 +182,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FAF4DF] flex items-center justify-center p-3 sm:p-6 md:p-10">
-      {/* Outer Card matching the exact shape, color, and layout of image.png */}
+      {/* Outer Card persis sesuai gambar mockup */}
       <div className="w-full max-w-xl bg-[#FAF4DF] border-3 border-black rounded-3xl p-5 sm:p-8 shadow-2xl relative">
-        {/* Top Header: PT KMI Wire and Cable Tbk + Subtle Setting icon */}
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm sm:text-base font-bold text-gray-600 tracking-wide">
+        {/* PT KMI Wire and Cable Tbk */}
+        <div className="mb-4">
+          <p
+            onClick={() => setOpenSheetSettingsModal(true)}
+            className="text-sm sm:text-base font-bold text-gray-600 tracking-wide cursor-pointer select-none hover:text-black transition"
+            title="Klik untuk pengaturan Google Spreadsheet"
+          >
             PT KMI Wire and Cable Tbk
           </p>
-          <button
-            type="button"
-            onClick={() => setOpenSheetSettingsModal(true)}
-            className="p-1.5 text-gray-400 hover:text-black transition rounded-lg"
-            title="Pengaturan Google Spreadsheet"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Title: FORM PENGIRIMAN KMI2 */}
@@ -319,24 +220,20 @@ export default function App() {
             />
           </div>
 
-          {/* List of Goods (Barang 1, Barang 2, ...) */}
+          {/* List Barang */}
           <div className="space-y-6">
             {items.map((item, index) => {
               const itemNumber = index + 1;
               const isItemDropdownOpen = activeItemDropdown === item.id;
               const isUnitDropdownOpen = activeUnitDropdown === item.id;
 
-              const filteredSuggestions = masterItems.filter((m) =>
-                m.toLowerCase().includes((item.nama_barang || '').toLowerCase())
-              );
-
-              const hasExactMatch = masterItems.some(
-                (m) => m.toLowerCase() === (item.nama_barang || '').trim().toLowerCase()
+              const filteredBarang = DAFTAR_BARANG.filter((b) =>
+                b.toLowerCase().includes((item.nama_barang || '').toLowerCase())
               );
 
               return (
                 <div key={item.id} className="space-y-2 relative">
-                  {/* Badge: Barang 1 */}
+                  {/* Badge: Barang 1, Barang 2, ... */}
                   <div className="flex items-center justify-between">
                     <div className="inline-block bg-[#9bd2a2] border-2 border-black rounded-2xl px-7 py-2 shadow-xs">
                       <span className="text-base sm:text-lg font-black text-black">
@@ -348,7 +245,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
-                        className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 border border-red-300 rounded-xl px-3 py-1 flex items-center gap-1 transition"
+                        className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 border border-red-300 rounded-xl px-3 py-1 flex items-center gap-1 transition cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                         <span>Hapus</span>
@@ -356,7 +253,7 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* Inner White Box */}
+                  {/* White Container */}
                   <div className="bg-white border-2 border-black rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-sm">
                     {/* Cari / Pilih barang */}
                     <div className="relative">
@@ -377,71 +274,38 @@ export default function App() {
                           onClick={() =>
                             setActiveItemDropdown(isItemDropdownOpen ? null : item.id)
                           }
-                          className="absolute right-3 top-3.5 text-gray-500 hover:text-black"
+                          className="absolute right-3 top-3.5 text-gray-500 hover:text-black cursor-pointer"
                           tabIndex={-1}
                         >
                           <ChevronDown className="w-5 h-5" />
                         </button>
                       </div>
 
-                      {/* Dropdown with options to search, add, or manage goods */}
+                      {/* Dropdown Daftar Barang murni dari script */}
                       {isItemDropdownOpen && (
                         <>
                           <div
                             className="fixed inset-0 z-20"
                             onClick={() => setActiveItemDropdown(null)}
                           />
-                          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border-2 border-black rounded-xl shadow-xl z-30 max-h-56 overflow-y-auto divide-y divide-gray-100">
-                            {/* Manage Goods Header Button */}
-                            <div className="p-2 bg-yellow-50 border-b border-gray-200 flex items-center justify-between text-xs text-gray-700">
-                              <span className="font-bold">Pilih Barang:</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveItemDropdown(null);
-                                  setOpenMasterItemModal(true);
-                                }}
-                                className="text-blue-700 font-bold hover:underline cursor-pointer"
-                              >
-                                ⚙ Update / Kelola Daftar
-                              </button>
-                            </div>
-
-                            {/* Quick add custom item if not found */}
-                            {item.nama_barang.trim() && !hasExactMatch && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const newName = item.nama_barang.trim();
-                                  updateMasterItems([...masterItems, newName]);
-                                  setActiveItemDropdown(null);
-                                }}
-                                className="w-full text-left px-3.5 py-2.5 text-xs sm:text-sm font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 transition"
-                              >
-                                <Plus className="w-4 h-4" />
-                                <span>
-                                  Tambahkan &quot;<b>{item.nama_barang.trim()}</b>&quot; ke Daftar
-                                </span>
-                              </button>
-                            )}
-
-                            {filteredSuggestions.length === 0 ? (
+                          <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border-2 border-black rounded-xl shadow-xl z-30 max-h-52 overflow-y-auto divide-y divide-gray-100">
+                            {filteredBarang.length === 0 ? (
                               <div className="p-3 text-xs text-gray-500 text-center">
-                                Tidak ada barang yang cocok.
+                                Tidak ada barang dalam daftar script yang cocok.
                               </div>
                             ) : (
-                              filteredSuggestions.map((suggestion) => (
+                              filteredBarang.map((b) => (
                                 <button
-                                  key={suggestion}
+                                  key={b}
                                   type="button"
                                   onClick={() => {
-                                    handleItemChange(item.id, 'nama_barang', suggestion);
+                                    handleItemChange(item.id, 'nama_barang', b);
                                     setActiveItemDropdown(null);
                                   }}
-                                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold hover:bg-yellow-50 transition text-gray-800 flex items-center justify-between"
+                                  className="w-full text-left px-4 py-2.5 text-xs sm:text-sm font-semibold hover:bg-yellow-50 transition text-gray-800 flex items-center justify-between cursor-pointer"
                                 >
-                                  <span>{suggestion}</span>
-                                  {item.nama_barang === suggestion && (
+                                  <span>{b}</span>
+                                  {item.nama_barang === b && (
                                     <Check className="w-4 h-4 text-emerald-600" />
                                   )}
                                 </button>
@@ -486,14 +350,14 @@ export default function App() {
                             onClick={() =>
                               setActiveUnitDropdown(isUnitDropdownOpen ? null : item.id)
                             }
-                            className="absolute right-2.5 top-3.5 text-gray-500 hover:text-black"
+                            className="absolute right-2.5 top-3.5 text-gray-500 hover:text-black cursor-pointer"
                             tabIndex={-1}
                           >
                             <ChevronDown className="w-5 h-5" />
                           </button>
                         </div>
 
-                        {/* Dropdown for Kuantitas with Manage button */}
+                        {/* Dropdown Daftar Kuantitas murni dari script */}
                         {isUnitDropdownOpen && (
                           <>
                             <div
@@ -501,21 +365,7 @@ export default function App() {
                               onClick={() => setActiveUnitDropdown(null)}
                             />
                             <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border-2 border-black rounded-xl shadow-xl z-30 max-h-48 overflow-y-auto divide-y divide-gray-100">
-                              <div className="p-2 bg-yellow-50 border-b border-gray-200 flex items-center justify-between text-xs text-gray-700">
-                                <span className="font-bold">Pilih Satuan:</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveUnitDropdown(null);
-                                    setOpenMasterUnitModal(true);
-                                  }}
-                                  className="text-blue-700 font-bold hover:underline cursor-pointer"
-                                >
-                                  ⚙ Update / Kelola
-                                </button>
-                              </div>
-
-                              {masterUnits.map((u) => (
+                              {DAFTAR_KUANTITAS.map((u) => (
                                 <button
                                   key={u}
                                   type="button"
@@ -523,7 +373,7 @@ export default function App() {
                                     handleItemChange(item.id, 'kuantitas', u);
                                     setActiveUnitDropdown(null);
                                   }}
-                                  className="w-full text-left px-3.5 py-2 text-xs sm:text-sm font-semibold hover:bg-yellow-50 transition text-gray-800 flex items-center justify-between"
+                                  className="w-full text-left px-4 py-2.5 text-xs sm:text-sm font-semibold hover:bg-yellow-50 transition text-gray-800 flex items-center justify-between cursor-pointer"
                                 >
                                   <span>{u}</span>
                                   {item.kuantitas === u && (
@@ -555,7 +405,7 @@ export default function App() {
             })}
           </div>
 
-          {/* Yellow Action Box matching image.png */}
+          {/* Yellow Action Box */}
           <div className="bg-[#fce59f] border-2 border-black rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-md">
             {/* + Tambah barang */}
             <button
@@ -585,21 +435,7 @@ export default function App() {
         </form>
       </div>
 
-      {/* Modals */}
-      <MasterItemModal
-        isOpen={openMasterItemModal}
-        onClose={() => setOpenMasterItemModal(false)}
-        items={masterItems}
-        onUpdateItems={updateMasterItems}
-      />
-
-      <MasterUnitModal
-        isOpen={openMasterUnitModal}
-        onClose={() => setOpenMasterUnitModal(false)}
-        units={masterUnits}
-        onUpdateUnits={updateMasterUnits}
-      />
-
+      {/* Modals for Spreadsheet & WhatsApp */}
       <SheetSettingsModal
         isOpen={openSheetSettingsModal}
         onClose={() => setOpenSheetSettingsModal(false)}
